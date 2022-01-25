@@ -5,6 +5,8 @@ use std::io;
 use std::io::Write;
 use std::process::Command;
 
+const PATTERN_COUNT: usize = 21;
+
 // save the images
 fn save_img(
     pxs: &mut [u32],
@@ -37,11 +39,13 @@ fn save_img(
 
 // render pixels for all the images
 fn fill_pixels(pxs: &mut [u32], width: u128, height: u128, from: u128, to: u128) {
+    let c = [width / 2, height / 2]; // center for the circle pattern
     for i in from..to {
-        println!("Rendering {}...", i);
+        print!("Rendering {}...", i);
         for y in 0..height {
             for x in 0..height {
-                // these are some cpu rendering experiments that I tried to invent
+                let d = [c[0] - x, c[1] - y]; // distance from center for the circle pattern
+                                              // these are some cpu rendering experiments that I tried to invent
                 pxs[((y * width + x) + ((i - from) * width * height)) as usize] = (if i == 0 {
                     (x & y) * 0xff0000
                 } else if i == 1 {
@@ -82,16 +86,20 @@ fn fill_pixels(pxs: &mut [u32], width: u128, height: u128, from: u128, to: u128)
                     (y.pow(2) % (x.pow(2) + 1)) / ((x.pow(2) % (y.pow(2) + 1)) + 1)
                 } else if i == 19 {
                     (y * width + x * i as u128) / (x + 1)
+                } else if i == 20 {
+                    // circle pattern
+                    (d[0].pow(2) + d[1].pow(2) <= (width / 2).pow(2)) as u128 * 0xFF0000
                 } else {
                     0
                 })
                     as u32;
-                if i > 19 {
-                    println!("ERROR: image with id '{}' does not exist!", i);
+                if i > 20 {
+                    eprintln!("ERROR: image with id '{}' does not exist!", i);
                     std::process::exit(1);
                 }
             }
         }
+        println!(" Done!");
     }
 }
 
@@ -105,12 +113,18 @@ fn main() -> io::Result<()> {
     let mut opts = Options::new();
     // defining options
     opts.optflag("c", "clean", "removes generated images");
+    opts.optflagopt(
+        "C",
+        "convert",
+        "converts images to the specified format, png by default. Depends on imagemagick",
+        "FORMAT",
+    );
     opts.optopt("f", "from-to", "render only some patterns", "FROM:TO");
     opts.optopt("h", "height", "change rendered image height", "HEIGHT");
     opts.optopt("i", "id", "render pattern with specific id", "ID");
     opts.optopt("o", "output", "set output file name", "NAME");
     opts.optflag("r", "render", "renders the images and saves them");
-    opts.optflag("s", "show", "run feh to show rendered images");
+    opts.optflagopt("s", "show", "run feh to show rendered images", "ID");
     opts.optopt("w", "width", "change rendered image width", "WIDTH");
     opts.optflag("", "help", "print this help menu");
     // parsing options
@@ -124,7 +138,7 @@ fn main() -> io::Result<()> {
     // if no options are provided, send an error message
     if argv[1..].is_empty() {
         print_usage(&argv[0], opts);
-        println!("ERROR: no options were provided!");
+        eprintln!("ERROR: no options were provided!");
         std::process::exit(1);
     };
 
@@ -139,11 +153,12 @@ fn main() -> io::Result<()> {
         Command::new("sh").arg("-c").arg("rm *.ppm").output()?;
     }
 
+    // set image numbers that should be generated
+    let mut from: usize = 0;
+    let mut to: usize = PATTERN_COUNT;
+
     // render option
     if matches.opt_present("r") {
-        // set image numbers that should be generated
-        let mut from: usize = 0;
-        let mut to: usize = 20;
         // from-to option
         match matches.opt_str("f") {
             Some(x) => {
@@ -188,13 +203,51 @@ fn main() -> io::Result<()> {
         // write the patterns in image files
         save_img(&mut pixels, width, height, from, to)?;
     }
+
+    // convert the image to the specified
+    let mut imgf = String::from("ppm");
+    if matches.opt_present("C") {
+        match matches.opt_str("C") {
+            Some(x) => imgf = x.parse().unwrap(),
+            None => imgf = String::from("png"),
+        }
+        for i in from..to {
+            // run the command, get its errors and convert them to a string
+            let cmd_err = match String::from_utf8(
+                Command::new("sh")
+                    .arg("-c")
+                    .arg(format!("convert {0}.ppm {0}.{1}", i, imgf))
+                    .output()
+                    .unwrap()
+                    .stderr,
+            ) {
+                // get unicode errors
+                Ok(v) => v,
+                Err(e) => panic!("Invalid utf-8 sequence: {}", e),
+            };
+            // print eventual convert errors
+            if !cmd_err.is_empty() {
+                eprintln!("{}", cmd_err);
+            }
+        }
+    }
     // open the image in an image viewer (right now only feh is supported)
     if matches.opt_present("s") {
+        let mut imgname = format!("*.{}", imgf);
+        let imgid; // -1 for all
+        match matches.opt_str("s") {
+            Some(x) => imgid = x.parse::<i32>().unwrap(),
+            None => imgid = -1,
+        }
+        if imgid > 0 {
+            imgname = format!("{}.{}", imgid, imgf);
+        }
         Command::new("sh")
             .arg("-c")
             .arg("feh -B black")
-            .arg("*.ppm")
+            .arg(imgname)
             .output()?;
     }
+
     Ok(())
 }

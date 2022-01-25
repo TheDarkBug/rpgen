@@ -23,18 +23,15 @@ Render the patterns 4 to 16 in default-sized images (512*512):
 ```
 Render the pattern with id 7, in a 1900x4500 image and show it:
 ```console
-./target/release/rpgen -crsh 1900 -w 4500 -i 7
+./target/release/rpgen -cr -s 7 -h 1900 -w 4500 -i 7
+```
+Convert image to a format:
+```console
+./target/release/rpgen -C [format] -i [id]
 ```
 Other options:
 ```console
 ./target/release/rpgen --help
-```
-If you want to convert the images to another format, run:
-```console
-for f in *.ppm
-do
-  convert $f $(print $f | sed "s/.ppm/.png/g")
-done
 ```
 
 ## License
