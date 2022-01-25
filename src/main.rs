@@ -5,7 +5,7 @@ use std::io;
 use std::io::Write;
 use std::process::Command;
 
-const PATTERN_COUNT: usize = 21;
+const PATTERN_COUNT: usize = 22;
 
 // save the images
 fn save_img(
@@ -44,8 +44,9 @@ fn fill_pixels(pxs: &mut [u32], width: u128, height: u128, from: u128, to: u128)
         print!("Rendering {}...", i);
         for y in 0..height {
             for x in 0..height {
+                // these are some cpu rendering experiments that I tried to invent
                 let d = [c[0] - x, c[1] - y]; // distance from center for the circle pattern
-                                              // these are some cpu rendering experiments that I tried to invent
+                let ceq = d[0].pow(2) + d[1].pow(2); // circle equation (w/o radius part) for the circle pattern
                 pxs[((y * width + x) + ((i - from) * width * height)) as usize] = (if i == 0 {
                     (x & y) * 0xff0000
                 } else if i == 1 {
@@ -86,14 +87,17 @@ fn fill_pixels(pxs: &mut [u32], width: u128, height: u128, from: u128, to: u128)
                     (y.pow(2) % (x.pow(2) + 1)) / ((x.pow(2) % (y.pow(2) + 1)) + 1)
                 } else if i == 19 {
                     (y * width + x * i as u128) / (x + 1)
-                } else if i == 20 {
+                } else if i == 20 || i == 21 {
                     // circle pattern
-                    (d[0].pow(2) + d[1].pow(2) <= (width / 2).pow(2)) as u128 * 0xFF0000
+                    (ceq <= (width / 2).pow(2)) as u128
+                        // empty circle
+                        * !(ceq <= (((width / 2) - (width / 16)).pow(2)) && i == 21) as u128
+                        * 0xFF0000
                 } else {
                     0
                 })
                     as u32;
-                if i > 20 {
+                if i >= PATTERN_COUNT as u128 {
                     eprintln!("ERROR: image with id '{}' does not exist!", i);
                     std::process::exit(1);
                 }
@@ -155,7 +159,7 @@ fn main() -> io::Result<()> {
 
     // set image numbers that should be generated
     let mut from: usize = 0;
-    let mut to: usize = PATTERN_COUNT;
+    let mut to: usize = PATTERN_COUNT - 1;
 
     // render option
     if matches.opt_present("r") {
