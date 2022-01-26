@@ -15,24 +15,27 @@ fn save_img(
     from: usize,
     to: usize,
 ) -> io::Result<()> {
+    let mut buf = vec![0u8; (width * height * 3) as usize];
     for i in from..to {
-        let mut fp = File::create(format!("{}.ppm", i))?;
         println!("Saving {}...", format!("{}.ppm", i));
-        write!(fp, "P6\n{} {} 255\n", width, height)?;
+        let mut fp = File::create(format!("{}.ppm", i))?;
+        let mut cbufid = 0;
         for y in 0..height {
             for x in 0..width {
                 // get current pixel
                 let px = pxs[(y * width + x) + ((i - from) * width * height)];
                 // separate the colors of the single pixel
-                let c = [
-                    ((px >> 8 * 2) & 0xff) as u8,
-                    ((px >> 8 * 1) & 0xff) as u8,
-                    ((px >> 8 * 0) & 0xff) as u8,
-                ];
-                // write the color buffer
-                fp.write(&c)?;
+                buf[cbufid] = ((px >> 8 * 2) & 0xff) as u8;
+                cbufid += 1;
+                buf[cbufid] = ((px >> 8 * 1) & 0xff) as u8;
+                cbufid += 1;
+                buf[cbufid] = ((px >> 8 * 0) & 0xff) as u8;
+                cbufid += 1;
             }
         }
+        write!(fp, "P6\n{} {} 255\n", width, height)?;
+        // write the color buffer
+        fp.write(&buf)?;
     }
     Ok(())
 }
