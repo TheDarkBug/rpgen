@@ -43,3 +43,11 @@ This file shows the patterns converted to png format.
 <p align=center><img title="20" src="https://raw.githubusercontent.com/TheDarkBug/rpgen/main/generated/20.png" alt="20" width="512"></p>
 
 <p align=center><img title="21" src="https://raw.githubusercontent.com/TheDarkBug/rpgen/main/generated/21.png" alt="21" width="512"></p>
+
+<p align=center><img title="22" src="https://raw.githubusercontent.com/TheDarkBug/rpgen/main/generated/22.png" alt="22" width="512"></p>
+
+<p align=center><img title="23" src="https://raw.githubusercontent.com/TheDarkBug/rpgen/main/generated/23.png" alt="23" width="512"></p>
+
+<p align=center><img title="24" src="https://raw.githubusercontent.com/TheDarkBug/rpgen/main/generated/24.png" alt="24" width="512"></p>
+
+<p align=center><img title="25" src="https://raw.githubusercontent.com/TheDarkBug/rpgen/main/generated/25.png" alt="25" width="512"></p>

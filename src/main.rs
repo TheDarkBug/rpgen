@@ -5,7 +5,7 @@ use std::io;
 use std::io::Write;
 use std::process::Command;
 
-const PATTERN_COUNT: usize = 22;
+const PATTERN_COUNT: usize = 27;
 
 // save the images
 fn save_img(
@@ -41,13 +41,18 @@ fn save_img(
 fn fill_pixels(pxs: &mut [u32], width: u128, height: u128, from: u128, to: u128) {
     let c = [width / 2, height / 2]; // center for the circle pattern
     for i in from..to {
+        if i >= PATTERN_COUNT as u128 {
+            eprintln!("ERROR: image with id '{}' does not exist!", i);
+            std::process::exit(1);
+        }
+
         print!("Rendering {}...", i);
         for y in 0..height {
             for x in 0..height {
                 // these are some cpu rendering experiments that I tried to invent
                 let d = [c[0] - x, c[1] - y]; // distance from center for the circle pattern
                 let ceq = d[0].pow(2) + d[1].pow(2); // circle equation (w/o radius part) for the circle pattern
-                pxs[((y * width + x) + ((i - from) * width * height)) as usize] = (if i == 0 {
+                pxs[((y * width + x) + ((i - from) * width * height)) as usize] = if i == 0 {
                     (x & y) * 0xff0000
                 } else if i == 1 {
                     (x & y) * 0xf
@@ -90,17 +95,23 @@ fn fill_pixels(pxs: &mut [u32], width: u128, height: u128, from: u128, to: u128)
                 } else if i == 20 || i == 21 {
                     // circle pattern
                     (ceq <= (width / 2).pow(2)) as u128
-                        // empty circle
+                    // empty circle
                         * !(ceq <= (((width / 2) - (width / 16)).pow(2)) && i == 21) as u128
                         * 0xFF0000
+                } else if i == 22 {
+                    x.pow((width / (y + 1)) as u32) + y.pow((height / (x + 1)) as u32)
+                } else if i == 23 {
+                    x.pow((width / (y + 1)) as u32) - y.pow((height / (x + 1)) as u32)
+                } else if i == 24 {
+                    x.pow((width / (y + 1)) as u32) * y.pow((height / (x + 1)) as u32)
+                } else if i == 25 {
+                    x.pow((width / (y + 1)) as u32) / (y.pow((height / (x + 1)) as u32) + 1)
+                } else if i == 26 {
+                    x.pow((width / (y + 1)) as u32) % (y.pow((height / (x + 1)) as u32) + 1)
                 } else {
                     0
-                })
-                    as u32;
-                if i >= PATTERN_COUNT as u128 {
-                    eprintln!("ERROR: image with id '{}' does not exist!", i);
-                    std::process::exit(1);
                 }
+                    as u32;
             }
         }
         println!(" Done!");
